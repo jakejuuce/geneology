@@ -7,7 +7,7 @@ import type { KinshipModule } from '@/lib/kinship';
 
 interface Props {
   dots: DotAtYear[];
-  arcs: Array<{ id: string; points: ArcPoint[] }>;
+  arcs: Array<{ id: string; points: ArcPoint[]; emphasis?: 'primary' | 'faint' }>;
   selectedId: string | null;
   onSelectDot: (id: string) => void;
   peopleIndex: Map<string, Person>;
@@ -108,13 +108,28 @@ export default function MapCanvas({
 
     for (const arc of arcs) {
       const latlngs = arc.points.map((p) => [p.lat, p.lng] as [number, number]);
+      const primary = arc.emphasis === 'primary';
       const polyline = L.polyline(latlngs, {
-        color: '#A68835',
-        weight: 1,
-        opacity: 0.35,
-        dashArray: '2,4',
+        color: primary ? '#6B2E2B' : '#A68835',
+        weight: primary ? 2.5 : 1,
+        opacity: primary ? 0.85 : 0.2,
+        dashArray: primary ? undefined : '2,4',
       });
       arcLayer.addLayer(polyline);
+
+      // Mark each RESI point along a primary arc with a small gold dot
+      if (primary) {
+        for (const pt of arc.points) {
+          const waypoint = L.circleMarker([pt.lat, pt.lng], {
+            radius: 3,
+            color: '#A68835',
+            weight: 1.5,
+            fillColor: '#F1E6D2',
+            fillOpacity: 1,
+          });
+          arcLayer.addLayer(waypoint);
+        }
+      }
     }
   }, [arcs]);
 
