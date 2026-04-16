@@ -22,3 +22,8 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# TypeScript build cache
+tsconfig.tsbuildinfo
+next-env.d.ts
+.next/
