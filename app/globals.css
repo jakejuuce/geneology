@@ -469,3 +469,110 @@ header .rule .ornament { font-size: 14px; }
   font-family: 'Cinzel', serif; letter-spacing: 0.1em;
   display: block; margin-bottom: 6px;
 }
+
+/* ===== CUSTOM EVENT CARD + FORM ===== */
+.event-card-wrap { position: relative; }
+.event-card-remove {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--cream); border: 1px solid var(--goldlite);
+  color: var(--gildfade); cursor: pointer;
+  font-family: 'Cinzel', serif; font-size: 14px;
+  width: 22px; height: 22px; line-height: 20px; text-align: center;
+  padding: 0; opacity: 0; transition: opacity 0.15s;
+}
+.event-card-wrap:hover .event-card-remove { opacity: 1; }
+.event-card-remove:hover { color: var(--oxblood); border-color: var(--oxblood); }
+
+.event-card-custom {
+  border-style: dashed;
+  background: linear-gradient(180deg, var(--cream), var(--parchment));
+}
+.custom-badge {
+  font-style: italic; color: var(--oxblood);
+  letter-spacing: 0.05em; text-transform: none;
+}
+
+.event-card-add {
+  border-style: dashed; border-color: var(--gildfade);
+  background: transparent; color: var(--brown);
+  align-items: center; justify-content: center;
+  text-align: center; min-height: 140px;
+}
+.event-card-add:hover:not(:disabled) {
+  background: rgba(241, 230, 210, 0.4);
+  border-color: var(--gold);
+}
+.event-card-plus {
+  font-size: 24px; color: var(--gold); margin-bottom: 4px;
+}
+
+.custom-event-form {
+  background: var(--cream);
+  border: 2px solid var(--gold);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  box-shadow: 3px 3px 0 rgba(61, 40, 23, 0.15);
+  position: relative;
+}
+.custom-event-form::before {
+  content: ''; position: absolute;
+  top: 6px; left: 6px; right: 6px; bottom: 6px;
+  border: 1px solid var(--goldlite); pointer-events: none; opacity: 0.6;
+}
+.form-title {
+  font-family: 'Cinzel', serif; font-weight: 500; font-size: 18px;
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--deep);
+  text-align: center; margin-bottom: 20px;
+  padding-bottom: 12px; border-bottom: 1px solid var(--goldlite);
+}
+.form-row {
+  display: block; margin-bottom: 14px; position: relative;
+}
+.form-label {
+  display: block;
+  font-family: 'Cinzel', serif; font-size: 10px; font-weight: 500;
+  letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--gildfade); margin-bottom: 4px;
+}
+.form-row input[type='text'],
+.form-row input[type='number'],
+.form-row select,
+.form-row textarea {
+  width: 100%;
+  font-family: 'Cormorant Garamond', serif; font-size: 16px;
+  color: var(--deep); background: var(--parchment);
+  border: 1px solid var(--gold); padding: 8px 12px;
+  box-sizing: border-box; outline: none;
+}
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+  border-color: var(--oxblood);
+  box-shadow: inset 0 0 0 1px var(--oxblood);
+}
+.form-row textarea { font-style: italic; resize: vertical; min-height: 60px; }
+.form-row-split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-error {
+  color: var(--oxblood); font-style: italic; font-size: 14px;
+  margin: 8px 0; padding: 8px 12px;
+  background: rgba(107, 46, 43, 0.08); border-left: 3px solid var(--oxblood);
+}
+.form-buttons {
+  display: flex; justify-content: flex-end; gap: 12px;
+  margin-top: 18px; padding-top: 14px;
+  border-top: 1px solid var(--goldlite);
+}
+.btn-primary {
+  background: var(--gold); color: var(--cream);
+  border: 1px solid var(--gold); cursor: pointer;
+  font-family: 'Cinzel', serif; font-size: 11px;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  padding: 10px 20px;
+}
+.btn-primary:hover { background: var(--gildfade); border-color: var(--gildfade); }
+.btn-ghost {
+  background: none; border: 1px solid var(--gildfade);
+  color: var(--brown); cursor: pointer;
+  font-family: 'Cinzel', serif; font-size: 11px;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  padding: 10px 20px;
+}
+.btn-ghost:hover { border-color: var(--brown); background: rgba(61,40,23,0.05); }

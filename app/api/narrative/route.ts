@@ -8,16 +8,28 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { EntityStore, Person } from '@/lib/types';
 import { KinshipModule } from '@/lib/kinship';
-import { findEventById } from '@/data/events';
+import { findEventById, type HistoricalEvent } from '@/data/events';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60; // allow long generation
+export const maxDuration = 60;
+
+interface RequestBody {
+  eventId?: string;
+  event?: HistoricalEvent;
+}
 
 export async function POST(request: Request) {
-  const { eventId } = (await request.json()) as { eventId: string };
-  const event = findEventById(eventId);
+  const body = (await request.json()) as RequestBody;
+
+  // Accept either a curated eventId or a full event object (used for custom events)
+  let event: HistoricalEvent | undefined;
+  if (body.event) {
+    event = body.event;
+  } else if (body.eventId) {
+    event = findEventById(body.eventId);
+  }
   if (!event) {
-    return new Response('Unknown event', { status: 404 });
+    return new Response('Event not provided or unknown', { status: 400 });
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
