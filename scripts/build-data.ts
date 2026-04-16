@@ -179,21 +179,27 @@ const entityStore: EntityStore = {
   },
 };
 
-// Pre-compute dotsByDecade for the map layer
-console.log('▶ Pre-computing dotsByDecade');
+// Pre-compute dotsByDecade for the map layer.
+// Time-aware: for each decade a person was alive, pick the location from
+// the most recent event ≤ decade-year. Handles migrants (born in one
+// country, died in another) with a "migration at age 25" heuristic when
+// only birth + death events exist.
+console.log('▶ Pre-computing dotsByDecade (time-aware)');
 const dotsByDecade: Record<string, DotAtYear[]> = {};
 for (const person of filtered) {
   if (person.isLiving) continue;
   const birth = person.birth?.date?.year;
   const death = person.death?.date?.year;
   if (birth == null || death == null) continue;
-  const loc = locationAt(person);
-  if (!loc) continue;
 
-  if (loc.lat == null || loc.lng == null) continue;
+  const timeline = buildPersonTimeline(person);
+  if (timeline.length === 0) continue;
+
   const startDecade = Math.floor(birth / 10) * 10;
   const endDecade = Math.floor(death / 10) * 10;
   for (let d = startDecade; d <= endDecade; d += 10) {
+    const loc = locationAtYear(timeline, d);
+    if (!loc || loc.lat == null || loc.lng == null) continue;
     const key = String(d);
     if (!dotsByDecade[key]) dotsByDecade[key] = [];
     dotsByDecade[key].push({
@@ -266,7 +272,6 @@ for (const [c, n] of Object.entries(byCentury).sort()) {
 function locationAt(person: Person) {
   const birthPlace = person.birth?.place;
   const deathPlace = person.death?.place;
-  // Most recent RESI or similar
   const resiPlaces = person.events
     .filter((e) => e.type === 'RESI')
     .map((e) => e.place)
@@ -275,4 +280,74 @@ function locationAt(person: Person) {
   if (birthPlace?.lat != null && birthPlace.lng != null) return birthPlace;
   if (deathPlace?.lat != null && deathPlace.lng != null) return deathPlace;
   return null;
+}
+
+// Build a time-ordered list of (year, place) waypoints for a person.
+// Includes birth + all dated events + death, in year order.
+// Applies a "migration at age 25" heuristic for people with only birth + death
+// events when birth and death places differ.
+interface Waypoint {
+  year: number;
+  place: NonNullable<Person['birth']>['place'];
+  synthetic?: boolean;
+}
+function buildPersonTimeline(person: Person): Waypoint[] {
+  const waypoints: Waypoint[] = [];
+
+  const birthPlace = person.birth?.place;
+  const birthYear = person.birth?.date?.year;
+  if (birthYear != null && birthPlace?.lat != null && birthPlace.lng != null) {
+    waypoints.push({ year: birthYear, place: birthPlace });
+  }
+
+  for (const e of person.events) {
+    if (
+      e.date?.year != null &&
+      e.place?.lat != null &&
+      e.place.lng != null &&
+      e.type !== 'BIRT' &&
+      e.type !== 'DEAT'
+    ) {
+      waypoints.push({ year: e.date.year, place: e.place });
+    }
+  }
+
+  const deathYear = person.death?.date?.year;
+  const deathPlace = person.death?.place;
+  if (deathYear != null && deathPlace?.lat != null && deathPlace.lng != null) {
+    waypoints.push({ year: deathYear, place: deathPlace });
+  }
+
+  waypoints.sort((a, b) => a.year - b.year);
+
+  // Migration heuristic: only birth + death, differing places, no intermediate events.
+  // Assume migration happened at age 25 (typical colonial pattern).
+  if (
+    waypoints.length === 2 &&
+    birthYear != null &&
+    deathYear != null &&
+    waypoints[0]!.place!.label !== waypoints[1]!.place!.label &&
+    deathYear - birthYear > 30 // only for people who lived long enough to migrate
+  ) {
+    const migrationYear = Math.min(birthYear + 25, deathYear - 1);
+    waypoints.splice(1, 0, {
+      year: migrationYear,
+      place: waypoints[1]!.place,
+      synthetic: true,
+    });
+  }
+
+  return waypoints;
+}
+
+// Pick the location for a person at a given year. Uses the most recent
+// waypoint with year ≤ Y, falling back to the first waypoint if Y is
+// before everyone's events (shouldn't happen for a person alive at Y).
+function locationAtYear(timeline: Waypoint[], year: number) {
+  let current = null;
+  for (const wp of timeline) {
+    if (wp.year <= year) current = wp.place;
+    else break;
+  }
+  return current ?? timeline[0]?.place ?? null;
 }

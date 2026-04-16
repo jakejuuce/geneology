@@ -122,6 +122,61 @@ const COUNTRY_QUALIFIED: Entry[] = [
   { match: /\bglasgow\b/i, lat: 55.86, lng: -4.25 },
 ];
 
+// ---- US state fallbacks (when just the state is named, no USA qualifier) ----
+// These run AFTER country-qualified patterns but BEFORE bare country fallbacks
+// so "Maryland" → Maryland, not generic USA-center Kansas.
+const US_STATE_FALLBACKS: Entry[] = [
+  { match: /\ballegany\b.*\bmaryland\b/i, lat: 39.62, lng: -78.77 },
+  { match: /\bbaltimore\b/i, lat: 39.29, lng: -76.61 },
+  { match: /\banne arundel\b/i, lat: 38.97, lng: -76.55 },
+  { match: /\bmaryland\b/i, lat: 39.05, lng: -76.79 },
+  { match: /\bmuhlenberg\b.*\bkentucky\b/i, lat: 37.22, lng: -87.13 },
+  { match: /\bdelaware\b/i, lat: 38.91, lng: -75.53 },
+  { match: /\bwest virginia\b/i, lat: 38.6, lng: -80.45 },
+  { match: /\bmaine\b.*\b(usa|united states|me\s*$)\b/i, lat: 44.69, lng: -69.38 },
+  { match: /\bnew hampshire\b/i, lat: 43.45, lng: -71.56 },
+  { match: /\bvermont\b/i, lat: 44.04, lng: -72.71 },
+  { match: /\bfloridas?\b.*\b(usa|united states|fl\s*$)\b/i, lat: 27.66, lng: -81.52 },
+  { match: /\bflorida\b/i, lat: 27.66, lng: -81.52 },
+  { match: /\boklahoma\b/i, lat: 35.47, lng: -97.52 },
+  { match: /\bkansas\b/i, lat: 38.5, lng: -98.38 },
+  { match: /\bnebraska\b/i, lat: 41.49, lng: -99.9 },
+  { match: /\bsouth dakota\b/i, lat: 44.3, lng: -99.44 },
+  { match: /\bnorth dakota\b/i, lat: 47.55, lng: -101.0 },
+  { match: /\bwyoming\b/i, lat: 43.08, lng: -107.29 },
+  { match: /\bmontana\b/i, lat: 46.88, lng: -110.36 },
+  { match: /\bidaho\b/i, lat: 44.07, lng: -114.74 },
+  { match: /\bnew mexico\b/i, lat: 34.52, lng: -105.87 },
+  { match: /\barkansas\b/i, lat: 35.2, lng: -91.83 },
+  { match: /\bminnesota\b/i, lat: 46.73, lng: -94.69 },
+  { match: /\bhawaii\b/i, lat: 19.9, lng: -155.58 },
+  { match: /\balaska\b/i, lat: 64.2, lng: -149.49 },
+];
+
+// ---- Swiss cantons & German regions (mom's tree has these) ----
+const EUROPE_FALLBACKS: Entry[] = [
+  { match: /\bbern\b/i, lat: 46.95, lng: 7.45 },
+  { match: /\bzurich\b|\bz\xfcrich\b/i, lat: 47.37, lng: 8.54 },
+  { match: /\bgeneva\b/i, lat: 46.2, lng: 6.14 },
+  { match: /\blucerne\b|\bluzern\b/i, lat: 47.05, lng: 8.31 },
+  { match: /\bbasel\b/i, lat: 47.56, lng: 7.59 },
+  { match: /\bcanton\b.*\bswitzerland\b/i, lat: 46.82, lng: 8.23 },
+  // German states
+  { match: /\bbavaria\b|\bbayern\b|\bmunich\b/i, lat: 48.79, lng: 11.5 },
+  { match: /\bsaxony\b|\bsachsen\b/i, lat: 51.1, lng: 13.2 },
+  { match: /\bw\xfcrttemberg\b|\bwurttemberg\b|\bstuttgart\b/i, lat: 48.66, lng: 9.35 },
+  { match: /\bhesse\b|\bhessen\b|\bfrankfurt\b/i, lat: 50.65, lng: 9.16 },
+  { match: /\brhine\b|\brhineland\b|\bpfalz\b|\bpalatinate\b/i, lat: 49.54, lng: 7.34 },
+  { match: /\bberlin\b/i, lat: 52.52, lng: 13.4 },
+  { match: /\bhamburg\b/i, lat: 53.55, lng: 9.99 },
+  // French regions
+  { match: /\balsace\b|\bstrasbourg\b/i, lat: 48.58, lng: 7.75 },
+  { match: /\bnormandy\b|\bnormandie\b/i, lat: 49.18, lng: 0.37 },
+  { match: /\bbrittany\b|\bbretagne\b/i, lat: 48.2, lng: -2.93 },
+  { match: /\bprovence\b|\bmarseille\b/i, lat: 43.3, lng: 5.4 },
+  { match: /\blyon\b/i, lat: 45.76, lng: 4.84 },
+];
+
 // ---- Pass 2: country fallbacks (when only country is known) ------------
 const COUNTRY_FALLBACKS: Entry[] = [
   { match: /\bengland\b/i, lat: 52.36, lng: -1.17 },
@@ -150,13 +205,25 @@ export function geocodePlace(label: string): Place {
     return { label: normalized, lat: null, lng: null };
   }
 
-  // Pass 1: country-qualified
+  // Pass 1: country-qualified (most specific)
   for (const entry of COUNTRY_QUALIFIED) {
     if (entry.match.test(normalized)) {
       return { label: normalized, lat: entry.lat, lng: entry.lng };
     }
   }
-  // Pass 2: country fallback
+  // Pass 2: US state fallbacks (beats the "usa" fallback → Kansas problem)
+  for (const entry of US_STATE_FALLBACKS) {
+    if (entry.match.test(normalized)) {
+      return { label: normalized, lat: entry.lat, lng: entry.lng };
+    }
+  }
+  // Pass 3: European region fallbacks (Swiss cantons, German states, etc.)
+  for (const entry of EUROPE_FALLBACKS) {
+    if (entry.match.test(normalized)) {
+      return { label: normalized, lat: entry.lat, lng: entry.lng };
+    }
+  }
+  // Pass 4: bare country fallback
   for (const entry of COUNTRY_FALLBACKS) {
     if (entry.match.test(normalized)) {
       return { label: normalized, lat: entry.lat, lng: entry.lng };
