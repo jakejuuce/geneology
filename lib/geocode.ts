@@ -1,119 +1,147 @@
 // Keyword-matching geocoder for v1 demo.
-// A real geocoding run (LocationIQ / OpenCage / self-hosted Nominatim) is
-// a separate script that writes public/data/places.json. This module is
-// the fallback when a place isn't in the cache — it covers the most common
-// historical regions in mom's tree (New England, England, Scotland, Ireland,
-// Virginia, Pennsylvania, etc.) and returns { lat: null, lng: null } for the rest.
+// A real geocoding run (LocationIQ / OpenCage / Nominatim) is a separate
+// script that writes public/data/places.json. This module is the fallback
+// when a place isn't in the cache.
+//
+// DISAMBIGUATION RULES: many county names exist in both the UK and the US
+// (Suffolk, Essex, Middlesex, Kent, Durham, Newcastle). The gazetteer is
+// ordered so country-qualified matches run FIRST, then standalone country
+// matches, then specific US cities, then generic country / state fallbacks.
+// First match wins, so ordering is load-bearing. Do not reorder without
+// tests.
 
 import type { Place } from './types';
 
-// Ordered from most specific to least — first match wins.
-// Lat/lng are approximate regional centers.
-const KEYWORD_GAZETTEER: Array<{ match: RegExp; lat: number; lng: number }> = [
+type Entry = { match: RegExp; lat: number; lng: number; note?: string };
+
+// ---- Pass 1: country-qualified patterns (most specific) ----------------
+const COUNTRY_QUALIFIED: Entry[] = [
+  // --- United Kingdom (require country/region qualifier) ---
+  { match: /\bsuffolk\b.*\b(england|uk|great britain)\b/i, lat: 52.19, lng: 0.97, note: 'Suffolk, England' },
+  { match: /\bessex\b.*\b(england|uk)\b/i, lat: 51.74, lng: 0.47, note: 'Essex, England' },
+  { match: /\bmiddlesex\b.*\b(england|uk|london)\b/i, lat: 51.57, lng: -0.33, note: 'Middlesex, England' },
+  { match: /\bkent\b.*\b(england|uk)\b/i, lat: 51.21, lng: 0.58, note: 'Kent, England' },
+  { match: /\bdurham\b.*\b(england|uk)\b/i, lat: 54.78, lng: -1.58, note: 'Durham, England' },
+  { match: /\bnewcastle\b.*\b(england|uk|tyne|lyme|stafford)\b/i, lat: 54.97, lng: -1.61, note: 'Newcastle, England' },
+  { match: /\bberkshire\b.*\b(england|uk)\b/i, lat: 51.46, lng: -1.14 },
+  { match: /\bworcester\b.*\b(england|uk|worcestershire)\b/i, lat: 52.19, lng: -2.22 },
+  { match: /\bhampshire\b.*\b(england|uk)\b/i, lat: 51.06, lng: -1.31 },
+  { match: /\byorkshire\b.*\b(england|uk)\b/i, lat: 53.96, lng: -1.08 },
+  { match: /\bcornwall\b.*\b(england|uk)\b/i, lat: 50.26, lng: -5.05 },
+  { match: /\bdorset\b.*\b(england|uk)\b/i, lat: 50.75, lng: -2.33 },
+  { match: /\bsomerset\b.*\b(england|uk)\b/i, lat: 51.11, lng: -2.94 },
+  { match: /\bdevon\b.*\b(england|uk)\b/i, lat: 50.72, lng: -3.85 },
+  { match: /\bwiltshire\b.*\b(england|uk)\b/i, lat: 51.35, lng: -1.97 },
+  { match: /\bstafford\b.*\b(england|uk|shire)\b/i, lat: 52.87, lng: -2.17 },
+  { match: /\bnottingham\b.*\b(england|uk|shire)\b/i, lat: 52.95, lng: -1.16 },
+  { match: /\bnorthumberland\b.*\b(england|uk)\b/i, lat: 55.51, lng: -2.08 },
+  { match: /\bflodden\b/i, lat: 55.62, lng: -2.15 },
+
+  // --- United States states (require US/USA/United States qualifier) ---
   // Massachusetts
-  { match: /braintree|quincy/i, lat: 42.2, lng: -71.0 },
-  { match: /boston|suffolk/i, lat: 42.36, lng: -71.06 },
-  { match: /salem|essex/i, lat: 42.52, lng: -70.9 },
-  { match: /plymouth/i, lat: 41.96, lng: -70.67 },
-  { match: /cambridge|middlesex.*mass/i, lat: 42.37, lng: -71.11 },
-  { match: /worcester/i, lat: 42.26, lng: -71.8 },
-  { match: /springfield.*mass/i, lat: 42.1, lng: -72.59 },
-  { match: /massachusetts/i, lat: 42.25, lng: -71.8 },
+  { match: /\bbraintree\b.*\b(mass|ma|usa|united states)\b/i, lat: 42.2, lng: -71.0 },
+  { match: /\bquincy\b.*\b(mass|ma|usa)\b/i, lat: 42.25, lng: -71.0 },
+  { match: /\bboston\b.*\b(mass|ma|usa|united states)\b/i, lat: 42.36, lng: -71.06 },
+  { match: /\bboston\b.*\b(suffolk\s*co|suffolk\s*county)\b/i, lat: 42.36, lng: -71.06 },
+  { match: /\bsalem\b.*\b(mass|ma|essex\s*co|usa|united states)\b/i, lat: 42.52, lng: -70.9 },
+  { match: /\bplymouth\b.*\b(mass|ma|usa|plymouth\s*co)\b/i, lat: 41.96, lng: -70.67 },
+  { match: /\bcambridge\b.*\b(mass|ma|middlesex\s*co)\b/i, lat: 42.37, lng: -71.11 },
+  { match: /\bworcester\b.*\b(mass|ma|usa)\b/i, lat: 42.26, lng: -71.8 },
+  { match: /\bsuffolk\b.*\b(mass|ma|suffolk\s*co)\b/i, lat: 42.36, lng: -71.06 },
+  { match: /\bessex\b.*\b(mass|ma|essex\s*co)\b/i, lat: 42.6, lng: -70.88 },
+  { match: /\bmiddlesex\b.*\b(mass|ma|middlesex\s*co.*ma)\b/i, lat: 42.46, lng: -71.39 },
+  { match: /\bmassachusetts\b/i, lat: 42.25, lng: -71.8 },
   // Connecticut
-  { match: /hartford/i, lat: 41.76, lng: -72.67 },
-  { match: /new haven/i, lat: 41.31, lng: -72.92 },
-  { match: /ridgefield|fairfield.*conn/i, lat: 41.29, lng: -73.49 },
-  { match: /connecticut/i, lat: 41.6, lng: -72.7 },
+  { match: /\bhartford\b.*\b(conn|ct|usa|hartford\s*co)\b/i, lat: 41.76, lng: -72.67 },
+  { match: /\bnew haven\b/i, lat: 41.31, lng: -72.92 },
+  { match: /\bridgefield\b/i, lat: 41.29, lng: -73.49 },
+  { match: /\bfairfield\b.*\b(conn|ct|fairfield\s*co)\b/i, lat: 41.15, lng: -73.26 },
+  { match: /\bconnecticut\b/i, lat: 41.6, lng: -72.7 },
   // Rhode Island
-  { match: /newport.*rhode|newport co.*rhode/i, lat: 41.49, lng: -71.31 },
-  { match: /providence/i, lat: 41.82, lng: -71.41 },
-  { match: /rhode island/i, lat: 41.6, lng: -71.5 },
+  { match: /\bnewport\b.*\b(rhode|ri|newport\s*co)\b/i, lat: 41.49, lng: -71.31 },
+  { match: /\bprovidence\b.*\b(rhode|ri|usa)\b/i, lat: 41.82, lng: -71.41 },
+  { match: /\brhode island\b/i, lat: 41.6, lng: -71.5 },
   // New York
-  { match: /manhattan|new york city|nyc/i, lat: 40.73, lng: -74.0 },
-  { match: /albany/i, lat: 42.65, lng: -73.76 },
-  { match: /new york/i, lat: 42.7, lng: -75.5 },
+  { match: /\bmanhattan\b/i, lat: 40.73, lng: -74.0 },
+  { match: /\bnew york city\b|\bnyc\b/i, lat: 40.73, lng: -74.0 },
+  { match: /\balbany\b.*\b(new york|ny|usa)\b/i, lat: 42.65, lng: -73.76 },
+  { match: /\bnew york\b/i, lat: 42.7, lng: -75.5 },
   // New Jersey
-  { match: /pedricks neck|salem.*new jersey/i, lat: 39.57, lng: -75.47 },
-  { match: /new jersey/i, lat: 40.2, lng: -74.7 },
+  { match: /\bpedricks neck\b/i, lat: 39.57, lng: -75.47 },
+  { match: /\bsalem\b.*\b(new jersey|nj)\b/i, lat: 39.57, lng: -75.47 },
+  { match: /\bnew jersey\b/i, lat: 40.2, lng: -74.7 },
   // Pennsylvania
-  { match: /philadelphia/i, lat: 39.95, lng: -75.16 },
-  { match: /berks.*penn/i, lat: 40.42, lng: -75.93 },
-  { match: /pittsburgh/i, lat: 40.44, lng: -79.99 },
-  { match: /pennsylvania/i, lat: 40.87, lng: -77.78 },
+  { match: /\bphiladelphia\b/i, lat: 39.95, lng: -75.16 },
+  { match: /\bberks\b.*\b(penn|pa|usa)\b/i, lat: 40.42, lng: -75.93 },
+  { match: /\bpittsburgh\b/i, lat: 40.44, lng: -79.99 },
+  { match: /\bpennsylvania\b/i, lat: 40.87, lng: -77.78 },
   // Virginia
-  { match: /louisa.*virginia/i, lat: 38.03, lng: -77.99 },
-  { match: /richmond.*virginia/i, lat: 37.54, lng: -77.44 },
-  { match: /jamestown/i, lat: 37.21, lng: -76.78 },
-  { match: /virginia/i, lat: 37.5, lng: -78.65 },
-  // The Carolinas
-  { match: /north carolina/i, lat: 35.55, lng: -79.38 },
-  { match: /south carolina/i, lat: 33.84, lng: -81.16 },
-  // Kentucky / mid-south
-  { match: /kentucky/i, lat: 37.84, lng: -84.27 },
-  { match: /tennessee/i, lat: 35.86, lng: -86.66 },
-  // Mid-west migrations
-  { match: /ohio/i, lat: 40.42, lng: -82.91 },
-  { match: /indiana/i, lat: 40.27, lng: -86.13 },
-  { match: /illinois/i, lat: 40.0, lng: -89.0 },
-  { match: /iowa/i, lat: 42.03, lng: -93.58 },
-  { match: /missouri/i, lat: 38.57, lng: -92.4 },
-  // Great Lakes
-  { match: /michigan/i, lat: 44.32, lng: -85.6 },
-  { match: /wisconsin/i, lat: 44.5, lng: -89.5 },
+  { match: /\blouisa\b.*\bvirginia\b/i, lat: 38.03, lng: -77.99 },
+  { match: /\brichmond\b.*\b(virginia|va)\b/i, lat: 37.54, lng: -77.44 },
+  { match: /\bjamestown\b/i, lat: 37.21, lng: -76.78 },
+  { match: /\bvirginia\b/i, lat: 37.5, lng: -78.65 },
+  // Carolinas + South
+  { match: /\bnorth carolina\b/i, lat: 35.55, lng: -79.38 },
+  { match: /\bsouth carolina\b/i, lat: 33.84, lng: -81.16 },
+  { match: /\bdurham\b.*\b(north carolina|nc|usa)\b/i, lat: 35.99, lng: -78.9 },
+  { match: /\bkentucky\b/i, lat: 37.84, lng: -84.27 },
+  { match: /\btennessee\b/i, lat: 35.86, lng: -86.66 },
+  // Midwest
+  { match: /\bohio\b/i, lat: 40.42, lng: -82.91 },
+  { match: /\bindiana\b/i, lat: 40.27, lng: -86.13 },
+  { match: /\billinois\b/i, lat: 40.0, lng: -89.0 },
+  { match: /\biowa\b/i, lat: 42.03, lng: -93.58 },
+  { match: /\bmissouri\b/i, lat: 38.57, lng: -92.4 },
+  { match: /\bmichigan\b/i, lat: 44.32, lng: -85.6 },
+  { match: /\bwisconsin\b/i, lat: 44.5, lng: -89.5 },
   // Deep South
-  { match: /georgia.*usa|georgia,\s*us|georgia,\s*united/i, lat: 32.17, lng: -82.9 },
-  { match: /alabama/i, lat: 32.8, lng: -86.79 },
-  { match: /mississippi/i, lat: 32.75, lng: -89.68 },
-  { match: /louisiana/i, lat: 31.17, lng: -91.87 },
-  { match: /texas/i, lat: 31.0, lng: -100.0 },
+  { match: /\bgeorgia\b.*\b(usa|united states|georgia,\s*us)\b/i, lat: 32.17, lng: -82.9 },
+  { match: /\balabama\b/i, lat: 32.8, lng: -86.79 },
+  { match: /\bmississippi\b/i, lat: 32.75, lng: -89.68 },
+  { match: /\blouisiana\b/i, lat: 31.17, lng: -91.87 },
+  { match: /\btexas\b/i, lat: 31.0, lng: -100.0 },
   // West
-  { match: /california/i, lat: 36.78, lng: -119.42 },
-  { match: /oregon/i, lat: 44.0, lng: -120.5 },
-  { match: /washington.*usa|washington,\s*us/i, lat: 47.45, lng: -121.49 },
-  { match: /utah/i, lat: 39.32, lng: -111.09 },
-  { match: /colorado/i, lat: 39.0, lng: -105.5 },
-  { match: /arizona/i, lat: 34.05, lng: -111.09 },
-  { match: /nevada/i, lat: 39.87, lng: -117.22 },
+  { match: /\bcalifornia\b/i, lat: 36.78, lng: -119.42 },
+  { match: /\boregon\b/i, lat: 44.0, lng: -120.5 },
+  { match: /\bwashington\b.*\b(usa|state|wa)\b/i, lat: 47.45, lng: -121.49 },
+  { match: /\butah\b/i, lat: 39.32, lng: -111.09 },
+  { match: /\bcolorado\b/i, lat: 39.0, lng: -105.5 },
+  { match: /\barizona\b/i, lat: 34.05, lng: -111.09 },
+  { match: /\bnevada\b/i, lat: 39.87, lng: -117.22 },
 
-  // England — counties
-  { match: /london|middlesex/i, lat: 51.51, lng: -0.13 },
-  { match: /kent/i, lat: 51.21, lng: 0.58 },
-  { match: /devon|plympton/i, lat: 50.72, lng: -3.85 },
-  { match: /wiltshire/i, lat: 51.35, lng: -1.97 },
-  { match: /stafford|newcastle under lyme|trentham/i, lat: 52.87, lng: -2.17 },
-  { match: /nottingham|wilford/i, lat: 52.95, lng: -1.16 },
-  { match: /durham/i, lat: 54.78, lng: -1.58 },
-  { match: /northumberland|flodden/i, lat: 55.51, lng: -2.08 },
-  { match: /berkshire/i, lat: 51.46, lng: -1.14 },
-  { match: /yorkshire/i, lat: 53.96, lng: -1.08 },
-  { match: /england/i, lat: 52.36, lng: -1.17 },
-  // Scotland
-  { match: /perth|perthshire/i, lat: 56.4, lng: -3.43 },
-  { match: /edinburgh/i, lat: 55.95, lng: -3.19 },
-  { match: /glasgow/i, lat: 55.86, lng: -4.25 },
-  { match: /scotland/i, lat: 56.49, lng: -4.2 },
-  // Ireland
-  { match: /londonderry|derry/i, lat: 54.99, lng: -7.31 },
-  { match: /dublin/i, lat: 53.35, lng: -6.26 },
-  { match: /belfast/i, lat: 54.6, lng: -5.93 },
-  { match: /cork/i, lat: 51.9, lng: -8.47 },
-  { match: /ireland/i, lat: 53.4, lng: -8.0 },
-  // Wales
-  { match: /wales|cardiff/i, lat: 52.13, lng: -3.78 },
-  // Rest of Europe
-  { match: /paris|france/i, lat: 48.85, lng: 2.35 },
-  { match: /germany|deutschland/i, lat: 51.17, lng: 10.45 },
-  { match: /netherlands|holland/i, lat: 52.13, lng: 5.29 },
-  { match: /belgium/i, lat: 50.5, lng: 4.47 },
-  { match: /switzerland/i, lat: 46.82, lng: 8.23 },
-  { match: /italy/i, lat: 41.87, lng: 12.57 },
-  { match: /spain/i, lat: 40.46, lng: -3.75 },
-  { match: /norway/i, lat: 60.47, lng: 8.47 },
-  { match: /sweden/i, lat: 60.13, lng: 18.64 },
-  { match: /denmark/i, lat: 56.26, lng: 9.5 },
+  // --- Ireland (qualifier required) ---
+  { match: /\blondonderry\b/i, lat: 54.99, lng: -7.31 },
+  { match: /\bderry\b/i, lat: 54.99, lng: -7.31 },
+  { match: /\bdublin\b/i, lat: 53.35, lng: -6.26 },
+  { match: /\bbelfast\b/i, lat: 54.6, lng: -5.93 },
+  { match: /\bcork\b/i, lat: 51.9, lng: -8.47 },
 
-  // Generic fallback: "USA" → center of contiguous US
-  { match: /united states|usa\b|u\.s\.a\.|u\.s\./i, lat: 39.5, lng: -98.35 },
+  // --- Scotland ---
+  { match: /\bperth\b.*\b(scotland|perthshire)\b/i, lat: 56.4, lng: -3.43 },
+  { match: /\bedinburgh\b/i, lat: 55.95, lng: -3.19 },
+  { match: /\bglasgow\b/i, lat: 55.86, lng: -4.25 },
+];
+
+// ---- Pass 2: country fallbacks (when only country is known) ------------
+const COUNTRY_FALLBACKS: Entry[] = [
+  { match: /\bengland\b/i, lat: 52.36, lng: -1.17 },
+  { match: /\bscotland\b/i, lat: 56.49, lng: -4.2 },
+  { match: /\b(ireland|\beire\b)\b/i, lat: 53.4, lng: -8.0 },
+  { match: /\bwales\b/i, lat: 52.13, lng: -3.78 },
+  { match: /\b(united kingdom|\buk\b|great britain)\b/i, lat: 54.0, lng: -2.5 },
+  { match: /\bfrance\b/i, lat: 48.85, lng: 2.35 },
+  { match: /\b(germany|deutschland)\b/i, lat: 51.17, lng: 10.45 },
+  { match: /\b(netherlands|holland)\b/i, lat: 52.13, lng: 5.29 },
+  { match: /\bbelgium\b/i, lat: 50.5, lng: 4.47 },
+  { match: /\bswitzerland\b/i, lat: 46.82, lng: 8.23 },
+  { match: /\bitaly\b/i, lat: 41.87, lng: 12.57 },
+  { match: /\bspain\b/i, lat: 40.46, lng: -3.75 },
+  { match: /\bnorway\b/i, lat: 60.47, lng: 8.47 },
+  { match: /\bsweden\b/i, lat: 60.13, lng: 18.64 },
+  { match: /\bdenmark\b/i, lat: 56.26, lng: 9.5 },
+  { match: /\b(united states|\busa\b|u\.s\.a\.|u\.s\.)\b/i, lat: 39.5, lng: -98.35 },
+  { match: /\bcanada\b/i, lat: 56.13, lng: -106.35 },
+  { match: /\b(london|middlesex)\b/i, lat: 51.51, lng: -0.13, note: 'London default' },
 ];
 
 export function geocodePlace(label: string): Place {
@@ -122,7 +150,14 @@ export function geocodePlace(label: string): Place {
     return { label: normalized, lat: null, lng: null };
   }
 
-  for (const entry of KEYWORD_GAZETTEER) {
+  // Pass 1: country-qualified
+  for (const entry of COUNTRY_QUALIFIED) {
+    if (entry.match.test(normalized)) {
+      return { label: normalized, lat: entry.lat, lng: entry.lng };
+    }
+  }
+  // Pass 2: country fallback
+  for (const entry of COUNTRY_FALLBACKS) {
     if (entry.match.test(normalized)) {
       return { label: normalized, lat: entry.lat, lng: entry.lng };
     }
