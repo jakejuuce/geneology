@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Geneology — v1 Wireframe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream:    #F1E6D2;
+    --parchment:#E8D9BC;
+    --aged:     #C8B58D;
+    --brown:    #3D2817;
+    --deep:     #2B1A0D;
+    --ink:      #1A0F07;
+    --gold:     #A68835;
+    --goldlite: #C9A962;
+    --gildfade: #8A6F28;
+    --oxblood:  #6B2E2B;
+    --forest:   #3D4D3A;
+    --seaink:   #273244;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', 'EB Garamond', Garamond, serif;
+    font-size: 17px;
+    line-height: 1.5;
+    overflow: hidden;
+    /* Subtle paper texture */
+    background-image:
+      radial-gradient(ellipse at 20% 30%, rgba(168, 132, 58, 0.08) 0%, transparent 40%),
+      radial-gradient(ellipse at 80% 70%, rgba(107, 46, 43, 0.06) 0%, transparent 40%),
+      repeating-linear-gradient(
+        45deg,
+        transparent 0px,
+        transparent 2px,
+        rgba(61, 40, 23, 0.015) 2px,
+        rgba(61, 40, 23, 0.015) 4px
+      );
+  }
+
+  /* =================================================================
+     FRAME — the whole app lives inside a gold-bordered "book page"
+     ================================================================= */
+  .frame {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    padding: 22px 26px;
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "header    header"
+      "map       sidebar"
+      "slider    slider";
+    gap: 20px;
+  }
+
+  /* gold filigree corner ornaments (simplified SVG repeated 4x) */
+  .filigree {
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    opacity: 0.65;
+    pointer-events: none;
+  }
+  .filigree.tl { top: 10px; left: 10px; }
+  .filigree.tr { top: 10px; right: 10px; transform: scaleX(-1); }
+  .filigree.bl { bottom: 10px; left: 10px; transform: scaleY(-1); }
+  .filigree.br { bottom: 10px; right: 10px; transform: scale(-1, -1); }
+
+  /* =================================================================
+     HEADER — minimal, just the title engraved at the top
+     ================================================================= */
+  header {
+    grid-area: header;
+    text-align: center;
+    padding-top: 6px;
+    position: relative;
+  }
+  header h1 {
+    font-family: 'Cinzel', serif;
+    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: 0.35em;
+    color: var(--deep);
+    text-transform: uppercase;
+  }
+  header .subtitle {
+    font-style: italic;
+    font-size: 14px;
+    color: var(--gildfade);
+    margin-top: 4px;
+    letter-spacing: 0.05em;
+  }
+  header .rule {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+    color: var(--gold);
+  }
+  header .rule .line { height: 1px; background: var(--gold); width: 80px; opacity: 0.6; }
+  header .rule .ornament { font-size: 14px; }
+
+  /* =================================================================
+     MAP — the hero. Warm sepia tones over an implied world.
+     ================================================================= */
+  .map {
+    grid-area: map;
+    position: relative;
+    background:
+      radial-gradient(ellipse at 30% 40%, rgba(200, 181, 141, 0.4) 0%, transparent 70%),
+      radial-gradient(ellipse at 65% 55%, rgba(168, 132, 58, 0.25) 0%, transparent 60%),
+      linear-gradient(160deg, #D8C8A5 0%, #C2AE87 50%, #A89064 100%);
+    border: 3px double var(--gold);
+    box-shadow:
+      inset 0 0 40px rgba(61, 40, 23, 0.2),
+      0 0 0 1px rgba(166, 136, 53, 0.4),
+      2px 2px 0 rgba(61, 40, 23, 0.15);
+    overflow: hidden;
+  }
+
+  /* Implied continental outlines via simple SVG positioning */
+  .map::before {
+    /* paper grain overlay */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 3px,
+        rgba(43, 26, 13, 0.02) 3px,
+        rgba(43, 26, 13, 0.02) 4px
+      );
+    pointer-events: none;
+  }
+
+  /* Europe blob */
+  .continent {
+    position: absolute;
+    background: rgba(61, 40, 23, 0.18);
+    border: 1px solid rgba(43, 26, 13, 0.25);
+  }
+  .c-europe {
+    top: 18%; left: 48%;
+    width: 18%; height: 32%;
+    border-radius: 65% 50% 70% 40% / 55% 65% 45% 70%;
+  }
+  .c-britain {
+    top: 15%; left: 44%;
+    width: 5%; height: 10%;
+    border-radius: 50% 40% 60% 70% / 60% 50% 70% 40%;
+  }
+  .c-namerica {
+    top: 20%; left: 5%;
+    width: 30%; height: 55%;
+    border-radius: 60% 40% 75% 65% / 45% 70% 55% 60%;
+  }
+
+  /* dots — ancestors */
+  .dot {
+    position: absolute;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--oxblood) 0%, var(--deep) 80%);
+    border: 1px solid rgba(241, 230, 210, 0.5);
+    box-shadow: 0 0 8px rgba(107, 46, 43, 0.5);
+    cursor: pointer;
+  }
+  .dot.small { width: 6px; height: 6px; }
+  .dot.faded { opacity: 0.5; }
+
+  /* migration arc */
+  .arcs {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  /* year caption floating over map, cartouche-style */
+  .year-caption {
+    position: absolute;
+    top: 18px; right: 22px;
+    font-family: 'Cinzel', serif;
+    font-weight: 500;
+    font-size: 34px;
+    letter-spacing: 0.15em;
+    color: var(--deep);
+    padding: 6px 22px;
+    background: linear-gradient(180deg, rgba(241,230,210,0.95) 0%, rgba(232,217,188,0.95) 100%);
+    border: 1px solid var(--gold);
+    border-radius: 2px;
+    box-shadow:
+      0 2px 0 rgba(61,40,23,0.1),
+      inset 0 0 0 1px rgba(168,132,58,0.3);
+  }
+  .year-caption .label {
+    display: block;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    color: var(--gildfade);
+    margin-bottom: -4px;
+  }
+
+  /* hint in the corner */
+  .hint {
+    position: absolute;
+    bottom: 16px;
+    left: 22px;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 14px;
+    color: rgba(43, 26, 13, 0.6);
+    letter-spacing: 0.03em;
+  }
+  .hint::before {
+    content: '❦ ';
+    color: var(--gold);
+  }
+
+  /* =================================================================
+     SIDEBAR — the selected ancestor's life, like a page from a ledger
+     ================================================================= */
+  .sidebar {
+    grid-area: sidebar;
+    background: var(--parchment);
+    border: 2px solid var(--gold);
+    box-shadow:
+      inset 0 0 40px rgba(168, 132, 58, 0.08),
+      2px 2px 0 rgba(61, 40, 23, 0.15);
+    padding: 28px 26px;
+    overflow-y: auto;
+    position: relative;
+  }
+  .sidebar::before {
+    content: '';
+    position: absolute;
+    top: 8px; left: 8px; right: 8px; bottom: 8px;
+    border: 1px solid var(--goldlite);
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .sb-eyebrow {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--gildfade);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .sb-name {
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: 0.08em;
+    color: var(--deep);
+    text-align: center;
+    margin-bottom: 2px;
+  }
+  .sb-kinship {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 17px;
+    color: var(--oxblood);
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .sb-dates {
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    letter-spacing: 0.2em;
+    color: var(--brown);
+    margin-bottom: 18px;
+    padding: 6px 0;
+    border-top: 1px solid var(--goldlite);
+    border-bottom: 1px solid var(--goldlite);
+  }
+
+  .sb-section {
+    margin-top: 20px;
+  }
+  .sb-section h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.3em;
+    color: var(--gildfade);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .sb-section h3::after {
+    content: '';
+    display: block;
+    height: 1px;
+    background: var(--goldlite);
+    margin-top: 4px;
+    opacity: 0.6;
+  }
+
+  .lifeline {
+    list-style: none;
+    font-size: 15px;
+    line-height: 1.75;
+  }
+  .lifeline li {
+    padding-left: 14px;
+    position: relative;
+    color: var(--brown);
+  }
+  .lifeline li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 11px;
+    width: 6px; height: 1px;
+    background: var(--gold);
+  }
+  .lifeline .year {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    color: var(--gildfade);
+    display: inline-block;
+    width: 42px;
+  }
+  .lifeline .source {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 11px;
+    font-style: italic;
+    color: var(--gildfade);
+    border-bottom: 1px dotted var(--gildfade);
+    cursor: help;
+  }
+
+  .family {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+    font-size: 14px;
+  }
+  .family a {
+    color: var(--deep);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(166, 136, 53, 0.4);
+    padding-bottom: 1px;
+  }
+  .family a:hover {
+    border-bottom-color: var(--oxblood);
+    color: var(--oxblood);
+  }
+  .family .label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gildfade);
+    display: block;
+    margin-bottom: 2px;
+    font-family: 'Cinzel', serif;
+  }
+
+  .sb-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--goldlite);
+  }
+  .sb-nav button {
+    background: none;
+    border: 1px solid var(--gold);
+    color: var(--brown);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    padding: 8px 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .sb-nav button:hover {
+    background: var(--gold);
+    color: var(--cream);
+  }
+
+  /* =================================================================
+     SLIDER — the hero interaction. Brass handle sliding along a ruler
+     with major ticks at centuries.
+     ================================================================= */
+  .slider-wrap {
+    grid-area: slider;
+    padding: 14px 40px 8px;
+    position: relative;
+  }
+
+  .slider-track {
+    position: relative;
+    height: 56px;
+    padding-top: 18px;
+  }
+
+  .slider-rule {
+    position: relative;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gildfade) 0%, var(--gold) 50%, var(--gildfade) 100%);
+    border-radius: 1px;
+  }
+
+  .tick {
+    position: absolute;
+    top: -10px;
+    width: 1px;
+    height: 16px;
+    background: var(--gildfade);
+  }
+  .tick.major { height: 22px; top: -14px; width: 1.5px; background: var(--brown); }
+  .tick-label {
+    position: absolute;
+    top: -34px;
+    transform: translateX(-50%);
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    color: var(--gildfade);
+  }
+  .tick.major .tick-label {
+    color: var(--deep);
+    font-weight: 500;
+  }
+
+  /* brass handle */
+  .handle {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 35% 30%,
+        #E8C77B 0%,
+        var(--goldlite) 25%,
+        var(--gold) 55%,
+        var(--gildfade) 80%,
+        #6B5220 100%);
+    box-shadow:
+      0 3px 8px rgba(43, 26, 13, 0.4),
+      inset 0 -2px 4px rgba(43, 26, 13, 0.3),
+      inset 0 2px 3px rgba(255, 240, 200, 0.5);
+    border: 1px solid #6B5220;
+    cursor: grab;
+  }
+  .handle::after {
+    content: '';
+    position: absolute;
+    inset: 14px;
+    border-radius: 50%;
+    border: 1px solid rgba(43, 26, 13, 0.3);
+  }
+
+  .handle-year {
+    position: absolute;
+    top: -48px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: 0.2em;
+    color: var(--deep);
+    background: var(--cream);
+    border: 1px solid var(--gold);
+    padding: 4px 12px;
+    white-space: nowrap;
+  }
+  .handle-year::before, .handle-year::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    width: 0; height: 0;
+  }
+  .handle-year::after {
+    top: 100%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--gold);
+  }
+
+  .slider-toggles {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--brown);
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle .box {
+    width: 14px; height: 14px;
+    border: 1px solid var(--gold);
+    background: var(--cream);
+    position: relative;
+  }
+  .toggle.on .box::after {
+    content: '✓';
+    position: absolute;
+    top: -4px; left: 1px;
+    color: var(--oxblood);
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+  }
+  .toggle-group { display: flex; gap: 22px; }
+
+  /* Share/print minor controls */
+  .minor {
+    color: var(--gildfade);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    font-family: 'Cinzel', serif;
+  }
+  .minor a {
+    color: var(--gildfade);
+    text-decoration: none;
+    margin-left: 18px;
+    border-bottom: 1px solid transparent;
+    transition: border 0.2s;
+  }
+  .minor a:hover {
+    border-bottom-color: var(--gold);
+    color: var(--brown);
+  }
+
+  /* annotation callouts (for wireframe only, not production UI) */
+  .anno {
+    position: absolute;
+    background: var(--seaink);
+    color: var(--cream);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 12px;
+    padding: 6px 10px;
+    font-style: italic;
+    max-width: 240px;
+    line-height: 1.4;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    pointer-events: none;
+  }
+  .anno::before {
+    content: '';
+    position: absolute;
+    width: 0; height: 0;
+    border: 5px solid transparent;
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <!-- filigree corners -->
+  <svg class="filigree tl" viewBox="0 0 90 90"><g stroke="#A68835" stroke-width="1" fill="none">
+    <path d="M 0 20 Q 15 20 20 15 T 40 10 M 20 0 Q 20 15 15 20 T 10 40"/>
+    <path d="M 5 25 Q 15 25 20 20 L 25 15 Q 30 10 35 10"/>
+    <path d="M 12 12 Q 20 15 25 22 Q 15 20 12 12 Z" fill="#A68835" opacity="0.4"/>
+    <circle cx="8" cy="8" r="2" fill="#A68835"/>
+    <path d="M 0 45 Q 10 45 18 38 M 45 0 Q 45 10 38 18"/>
+  </g></svg>
+  <svg class="filigree tr" viewBox="0 0 90 90"><g stroke="#A68835" stroke-width="1" fill="none">
+    <path d="M 0 20 Q 15 20 20 15 T 40 10 M 20 0 Q 20 15 15 20 T 10 40"/>
+    <path d="M 5 25 Q 15 25 20 20 L 25 15 Q 30 10 35 10"/>
+    <path d="M 12 12 Q 20 15 25 22 Q 15 20 12 12 Z" fill="#A68835" opacity="0.4"/>
+    <circle cx="8" cy="8" r="2" fill="#A68835"/>
+    <path d="M 0 45 Q 10 45 18 38 M 45 0 Q 45 10 38 18"/>
+  </g></svg>
+  <svg class="filigree bl" viewBox="0 0 90 90"><g stroke="#A68835" stroke-width="1" fill="none">
+    <path d="M 0 20 Q 15 20 20 15 T 40 10 M 20 0 Q 20 15 15 20 T 10 40"/>
+    <path d="M 5 25 Q 15 25 20 20 L 25 15 Q 30 10 35 10"/>
+    <path d="M 12 12 Q 20 15 25 22 Q 15 20 12 12 Z" fill="#A68835" opacity="0.4"/>
+    <circle cx="8" cy="8" r="2" fill="#A68835"/>
+    <path d="M 0 45 Q 10 45 18 38 M 45 0 Q 45 10 38 18"/>
+  </g></svg>
+  <svg class="filigree br" viewBox="0 0 90 90"><g stroke="#A68835" stroke-width="1" fill="none">
+    <path d="M 0 20 Q 15 20 20 15 T 40 10 M 20 0 Q 20 15 15 20 T 10 40"/>
+    <path d="M 5 25 Q 15 25 20 20 L 25 15 Q 30 10 35 10"/>
+    <path d="M 12 12 Q 20 15 25 22 Q 15 20 12 12 Z" fill="#A68835" opacity="0.4"/>
+    <circle cx="8" cy="8" r="2" fill="#A68835"/>
+    <path d="M 0 45 Q 10 45 18 38 M 45 0 Q 45 10 38 18"/>
+  </g></svg>
+
+  <header>
+    <h1>The Kingsbury &middot; Taub Lineage</h1>
+    <div class="rule">
+      <span class="line"></span>
+      <span class="ornament">❦</span>
+      <span class="line"></span>
+    </div>
+    <p class="subtitle">Three thousand four hundred ninety-one souls &middot; Eleven centuries</p>
+  </header>
+
+  <!-- =========================================================
+       MAP
+       ========================================================= -->
+  <div class="map">
+    <div class="year-caption">
+      <span class="label">in the year</span>
+      1720
+    </div>
+
+    <!-- continental hints -->
+    <div class="continent c-britain"></div>
+    <div class="continent c-europe"></div>
+    <div class="continent c-namerica"></div>
+
+    <!-- migration arcs (SVG) -->
+    <svg class="arcs" viewBox="0 0 1000 600" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#6B2E2B" stop-opacity="0.15"/>
+          <stop offset="60%" stop-color="#A68835" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#6B2E2B" stop-opacity="0.8"/>
+        </linearGradient>
+      </defs>
+      <!-- England → Massachusetts -->
+      <path d="M 470 160 Q 280 80 150 280" stroke="url(#arcGrad)" stroke-width="1.5" fill="none" stroke-dasharray="2,3"/>
+      <!-- within England movement -->
+      <path d="M 475 165 Q 490 175 500 195" stroke="#8A6F28" stroke-width="1" fill="none" opacity="0.5"/>
+      <!-- Massachusetts → New York → Ohio -->
+      <path d="M 150 280 Q 180 320 220 360" stroke="#A68835" stroke-width="1.2" fill="none" opacity="0.7"/>
+      <!-- Scotland → Pennsylvania -->
+      <path d="M 455 130 Q 280 130 145 290" stroke="url(#arcGrad)" stroke-width="1" fill="none" stroke-dasharray="2,3" opacity="0.6"/>
+    </svg>
+
+    <!-- dots: positioned approximately to suggest a real tree -->
+    <!-- Massachusetts cluster -->
+    <div class="dot" style="top: 44%; left: 15%;"></div>
+    <div class="dot small" style="top: 46%; left: 14%;"></div>
+    <div class="dot small" style="top: 43%; left: 17%;"></div>
+    <div class="dot" style="top: 47%; left: 16%;"></div>
+    <!-- Virginia / Mid-atlantic -->
+    <div class="dot small faded" style="top: 52%; left: 18%;"></div>
+    <div class="dot small" style="top: 54%; left: 20%;"></div>
+    <!-- Connecticut / NY -->
+    <div class="dot" style="top: 48%; left: 17%;"></div>
+    <div class="dot small" style="top: 49%; left: 19%;"></div>
+    <!-- England/UK -->
+    <div class="dot small faded" style="top: 27%; left: 46%;"></div>
+    <div class="dot small" style="top: 28%; left: 48%;"></div>
+    <div class="dot" style="top: 30%; left: 47%;"></div>
+    <div class="dot small faded" style="top: 25%; left: 45%;"></div>
+    <!-- Scotland -->
+    <div class="dot small faded" style="top: 21%; left: 46%;"></div>
+    <div class="dot small faded" style="top: 22%; left: 47%;"></div>
+    <!-- Ireland -->
+    <div class="dot small faded" style="top: 28%; left: 43%;"></div>
+    <!-- Europe -->
+    <div class="dot small faded" style="top: 35%; left: 52%;"></div>
+    <div class="dot small faded" style="top: 38%; left: 55%;"></div>
+    <!-- Selected dot (with halo) -->
+    <div class="dot" style="top: 45%; left: 15.5%; width: 14px; height: 14px; box-shadow: 0 0 0 4px rgba(166,136,53,0.3), 0 0 12px rgba(107,46,43,0.8); background: var(--oxblood);"></div>
+
+    <!-- Floating name tag anchored at selected dot (spatial anchor) -->
+    <div style="position: absolute; top: calc(45% - 34px); left: 15.5%; transform: translateX(-50%); background: var(--cream); border: 1px solid var(--gold); padding: 4px 10px; font-family: 'Cinzel', serif; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; color: var(--deep); white-space: nowrap; cursor: pointer; box-shadow: 0 2px 6px rgba(43,26,13,0.15); z-index: 10;">
+      SARAH ADAMS <span style="color: var(--gildfade); font-style: italic; font-weight: 400; letter-spacing: 0.05em; margin-left: 4px;">&middot; 1697&ndash;1762</span>
+    </div>
+    <!-- Small arrow connecting tag to dot -->
+    <svg style="position: absolute; top: calc(45% - 14px); left: 15.5%; transform: translateX(-50%); width: 8px; height: 8px; z-index: 9;" viewBox="0 0 8 8">
+      <path d="M 0 0 L 8 0 L 4 8 Z" fill="#F1E6D2" stroke="#A68835" stroke-width="0.5"/>
+    </svg>
+
+    <div class="hint">Drag the year to follow the bloodline</div>
+  </div>
+
+  <!-- =========================================================
+       SIDEBAR
+       ========================================================= -->
+  <aside class="sidebar">
+    <div class="sb-eyebrow">Selected</div>
+    <h2 class="sb-name">Sarah Adams</h2>
+    <p class="sb-kinship">your 6<sup>th</sup> great-grandmother</p>
+    <div class="sb-dates">1697 &mdash; 1762</div>
+
+    <div class="sb-section">
+      <h3>Life</h3>
+      <ul class="lifeline">
+        <li><span class="year">1697</span> Born in Braintree, Massachusetts Bay Colony <span class="source">U.S. Vital Rec.</span></li>
+        <li><span class="year">1720</span> Married Joseph Adams in Boston <span class="source">Church of Christ</span></li>
+        <li><span class="year">1721</span> Son John Adams, born <span class="source">Braintree Reg.</span></li>
+        <li><span class="year">1735</span> Residing at Mount Wollaston <span class="source">Tax Rolls</span></li>
+        <li><span class="year">1762</span> Died in Braintree, aged 65 <span class="source">Parish</span></li>
+      </ul>
+    </div>
+
+    <div class="sb-section">
+      <h3>Family</h3>
+      <div class="family">
+        <div>
+          <span class="label">Father</span>
+          <a href="#">Peter Boylston</a>
+        </div>
+        <div>
+          <span class="label">Mother</span>
+          <a href="#">Ann White</a>
+        </div>
+        <div>
+          <span class="label">Husband</span>
+          <a href="#">Joseph Adams</a>
+        </div>
+        <div>
+          <span class="label">Children (4)</span>
+          <a href="#">John Adams</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-nav">
+      <button>&larr; Parents</button>
+      <span class="minor">gen. 7 of 32</span>
+      <button>Children &rarr;</button>
+    </div>
+  </aside>
+
+  <!-- =========================================================
+       SLIDER
+       ========================================================= -->
+  <div class="slider-wrap">
+    <div class="slider-track">
+      <div class="slider-rule"></div>
+
+      <!-- major ticks at centuries -->
+      <div class="tick major" style="left: 0%;"><span class="tick-label">1400</span></div>
+      <div class="tick" style="left: 8.06%;"></div>
+      <div class="tick major" style="left: 16.13%;"><span class="tick-label">1500</span></div>
+      <div class="tick" style="left: 24.19%;"></div>
+      <div class="tick major" style="left: 32.26%;"><span class="tick-label">1600</span></div>
+      <div class="tick" style="left: 40.32%;"></div>
+      <div class="tick major" style="left: 48.39%;"><span class="tick-label">1700</span></div>
+      <div class="tick" style="left: 56.45%;"></div>
+      <div class="tick major" style="left: 64.52%;"><span class="tick-label">1800</span></div>
+      <div class="tick" style="left: 72.58%;"></div>
+      <div class="tick major" style="left: 80.65%;"><span class="tick-label">1900</span></div>
+      <div class="tick" style="left: 88.71%;"></div>
+      <div class="tick major" style="left: 96.77%;"><span class="tick-label">2000</span></div>
+
+      <!-- brass handle positioned at year 1720 -->
+      <div class="handle" style="left: 51.61%;">
+        <div class="handle-year">1720</div>
+      </div>
+    </div>
+
+    <div class="slider-toggles">
+      <div class="toggle-group">
+        <span class="toggle on"><span class="box"></span>show migration paths</span>
+        <span class="toggle on"><span class="box"></span>show ancestor dots</span>
+      </div>
+      <span class="minor">
+        <a href="#">today's moment</a>
+        <a href="#">ask the record</a>
+        <a href="#">share</a>
+      </span>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
